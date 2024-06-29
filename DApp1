@@ -1,0 +1,102 @@
+pragma solidity ^0.8.0;
+
+contract OrgRegistry {
+    address[] public orgs;
+    mapping(address => address) public orgToVestingContract;
+
+    function registerOrg(address _orgAddress, string memory _orgName) public {
+        orgs.push(_orgAddress);
+        orgToVestingContract[_orgAddress] = address(new VestingContract(_orgAddress, _orgName));
+    }
+
+    function getVestingContract(address _orgAddress) public view returns (address) {
+        return orgToVestingContract[_orgAddress];
+    }
+}
+
+
+pragma solidity ^0.8.0;
+
+contract VestingContract {
+    address public orgAddress;
+    string public orgName;
+    mapping(address => uint256) public whitelistedAddresses;
+    mapping(address => uint256) public vestingPeriods;
+
+    constructor(address _orgAddress, string memory _orgName) public {
+        orgAddress = _orgAddress;
+        orgName = _orgName;
+    }
+
+    function addStakeholder(address _stakeholder, uint256 _vestingPeriod) public {
+        require(msg.sender == orgAddress, "Only org admin can add stakeholders");
+        whitelistedAddresses[_stakeholder] = block.timestamp;
+        vestingPeriods[_stakeholder] = _vestingPeriod;
+    }
+
+    function claimTokens(address _stakeholder) public {
+        require(whitelistedAddresses[_stakeholder]!= 0, "Address not whitelisted");
+        require(block.timestamp >= whitelistedAddresses[_stakeholder] + vestingPeriods[_stakeholder], "Vesting period not over");
+        // Transfer tokens to stakeholder (implementation omitted for brevity)
+    }
+
+    function withdrawTokens() public {
+        require(msg.sender == orgAddress, "Only org admin can withdraw tokens");
+        // Transfer tokens to org admin (implementation omitted for brevity)
+    }
+}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Wallet</title>
+</head>
+<body>
+    <h1>Connect Wallet</h1>
+    <button id="connect-btn">Connect Wallet</button>
+    <script src="https://cdn.jsdelivr.net/npm/ethers.js@5.4.7/dist/ethers.min.js"></script>
+    <script>
+        const connectBtn = document.getElementById('connect-btn');
+
+        connectBtn.addEventListener('click', async () => {
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            await provider.send('eth_requestAccounts', []);
+            const signer = provider.getSigner();
+            console.log('Connected to wallet:', signer.getAddress());
+            // Redirect to register-org.html or withdraw-tokens.html based on user role
+        });
+    </script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Org</title>
+</head>
+<body>
+    <h1>Register Org</h1>
+    <form>
+        <label for="org-name">Org Name:</label>
+        <input type="text" id="org-name" name="org-name"><br><br>
+        <label for="stakeholder-address">Stakeholder Address:</label>
+        <input type="text" id="stakeholder-address" name="stakeholder-address"><br><br>
+        <label for="vesting-period">Vesting Period (in seconds):</label>
+        <input type="number" id="vesting-period" name="vesting-period"><br><br>
+        <button id="register-btn">Register Org</button>
+    </form>
+    <script src="https://cdn.jsdelivr.net/npm/ethers.js@5.4.7/dist/ethers.min.js"></script>
+    <script>
+        const registerBtn = document.getElementById('register-btn');
+
+        registerBtn.addEventListener('click', async () => {
+            const orgName = document.getElementById('org-name').value;
+            const stakeholderAddress = document.getElementById('stakeholder-address').value;
+            const vestingPeriod = document.getElementById('vesting-period').value;
+
+            const provider = new ethers.providers.Web3Provider(window.eth
